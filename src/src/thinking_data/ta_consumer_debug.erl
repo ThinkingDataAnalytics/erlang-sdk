@@ -67,7 +67,7 @@ init() ->
   %% 创建ETS表
   ets:new(?TABLE, [set, named_table, public]).
 
--spec add(thinking_analytic_sdk:event()) -> _.
+-spec add(thinking_analytics_sdk:event()) -> _.
 add(E) ->
   inets:start(),
   DryRun = case get_is_write() of

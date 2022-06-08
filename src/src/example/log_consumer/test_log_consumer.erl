@@ -25,9 +25,9 @@ test() ->
   ta_consumer_log:config_rotate_mode(ta_consumer_log:rotate_mode_hour()),
 
   %% 初始化SDK，传入上报方式类型
-  thinking_analytic_sdk:init(thinking_analytic_sdk:consumer_type_log()),
+  thinking_analytics_sdk:init(thinking_analytics_sdk:consumer_type_log()),
   %% 普通事件
-  thinking_analytic_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"#ip" => "123.123.123.123", "#time" => os:timestamp()}),
+  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"#ip" => "123.123.123.123", "#time" => os:timestamp()}),
 %%  %% 首次事件
 %%  thinking_analytic_sdk:track_first("account_id_Erlang", "distinct_id", "first_login", "1", #{"key1" => "value1", "key2" => "value2"}),
 %%  %% 可更新事件
@@ -44,7 +44,7 @@ test() ->
 %%  thinking_analytic_sdk:user_del("account_id_Erlang", "distinct_id"),
 
   %% 关闭SDK时候需要调用
-  thinking_analytic_sdk:close().
+  thinking_analytics_sdk:close().
 
 
 

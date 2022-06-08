@@ -93,7 +93,7 @@ config_file_name_prefix(Prefix) ->
 get_file_name_prefix() ->
   find_value_from_ets(?FILE_NAME_PREFIX).
 
--spec add(thinking_analytic_sdk:event()) -> _.
+-spec add(thinking_analytics_sdk:event()) -> _.
 add(E) ->
   %% 拿到一个可用的文件名
   FilePath = log_file_name(),

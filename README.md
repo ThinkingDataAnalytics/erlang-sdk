@@ -1,8 +1,8 @@
 # Erlang SDK 使用指南
 
-本指南将会为您介绍如何使用 Erlang SDK 接入您的项目。您可以在访问 [GitHub](https://github.com/ThinkingDataAnalytics/erlang-sdk) 获取 SDK 的源代码。
+本指南将会为您介绍如何使用 Erlang SDK 接入您的项目，您可以在访问 [GitHub](https://github.com/ThinkingDataAnalytics/erlang-sdk) 获取 SDK 的源代码。
 
-**最新版本为**：1.0.0
+**最新版本为**：v1.0.0
 
 **更新时间为**：2022-05-23
 
@@ -211,10 +211,10 @@ thinking_data:close()
 EventName = "event_name",
 EventId = "event_id",
 %% 上报后，事件属性 status 为 3, price 为 100
-thinking_analytic_sdk:track_update("account_id_Erlang", "distinct_id", EventName, EventId, #{"price" => 100, "status" => 3}),
+thinking_analytics_sdk:track_update("account_id_Erlang", "distinct_id", EventName, EventId, #{"price" => 100, "status" => 3}),
 
 %% 上报后，事件属性 status 为 5, price 为 100 不变
-thinking_analytic_sdk:track_update("account_id_Erlang", "distinct_id", EventName, EventId, #{"price" => 100, "status" => 5}),
+thinking_analytics_sdk:track_update("account_id_Erlang", "distinct_id", EventName, EventId, #{"price" => 100, "status" => 5}),
 ```
 
 ### 6.2 可重写事件
@@ -225,10 +225,10 @@ thinking_analytic_sdk:track_update("account_id_Erlang", "distinct_id", EventName
 EventName = "overWrite_event",
 EventId = "event_id",
 %% 上报后，事件属性 price 为 100, status 为 5
-thinking_analytic_sdk:track_overwrite("account_id_Erlang", "distinct_id", EventName, EventId, #{"price" => 100, "status" => 5}),
+thinking_analytics_sdk:track_overwrite("account_id_Erlang", "distinct_id", EventName, EventId, #{"price" => 100, "status" => 5}),
 
 %% 上报后，事件属性 price 为 20, status 属性被删除
-thinking_analytic_sdk:track_overwrite("account_id_Erlang", "distinct_id", EventName, EventId, #{"price" => 20}),
+thinking_analytics_sdk:track_overwrite("account_id_Erlang", "distinct_id", EventName, EventId, #{"price" => 20}),
 ```
 
 ### 6.3 首次事件
@@ -239,7 +239,7 @@ thinking_analytic_sdk:track_overwrite("account_id_Erlang", "distinct_id", EventN
 EventName = "first_event",
 FirstCheckId = "first_check_id",
 %% 首次事件
-thinking_analytic_sdk:track_first("account_id_Erlang", "distinct_id", EventName, FirstCheckId, #{"key1" => "value1", "key2" => "value2"}),
+thinking_analytics_sdk:track_first("account_id_Erlang", "distinct_id", EventName, FirstCheckId, #{"key1" => "value1", "key2" => "value2"}),
 ```
 
 ## ChangeLog
