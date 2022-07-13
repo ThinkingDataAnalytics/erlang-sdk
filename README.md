@@ -2,9 +2,9 @@
 
 本指南将会为您介绍如何使用 Erlang SDK 接入您的项目，您可以在访问 [GitHub](https://github.com/ThinkingDataAnalytics/erlang-sdk) 获取 SDK 的源代码。
 
-**最新版本为**：v1.0.0
+**最新版本为**：v1.1.0
 
-**更新时间为**：2022-05-23
+**更新时间为**：2022-07-13
 
 [Erlang SDK 下载地址](https://github.com/ThinkingDataAnalytics/erlang-sdk)
 
@@ -16,66 +16,83 @@
 
 具体使用方式可以参考 SDK 中 example 文件夹中的示例文件。
 
-（1）consumer_log： 批量实时写本地文件，默认以天为分隔，需要与 LogBus 搭配使用进行数据上传。
+（1）ta_consumer_log： 批量实时写本地文件，默认以天为分隔，需要与 LogBus 搭配使用进行数据上传。
 
-（2）consumer_debug_batch： 逐条实时地向 TA 服务器传输数据，不需要搭配传输工具，如果数据出现错误，整条数据都将不会入库，并且返回详细的错误说明，不建议在生产环境中使用。
+（2）ta_consumer_debug： 逐条实时地向 TA 服务器传输数据，不需要搭配传输工具，如果数据出现错误，整条数据都将不会入库，并且返回详细的错误说明，不建议在生产环境中使用。
 
 ### 1.2 初始化 SDK
 
 您可以通过以下方法获得 SDK 实例：
 
-（1）consumer_log：
+（1）ta_consumer_log：
 
 ```Erlang
-%% 必须先调用init函数，SDK内部进行必要的初始化
-consumer_log:init(),
+%% 必须先调用init，SDK内部进行必要的初始化
+ta_consumer_log:init(),
 %% 配置写入文件的路径
-consumer_log:config_directory("/Users/Shared/log"),
+ta_consumer_log:config_directory("/Users/Shared/log"),
 %% 配置写入文件的前缀
-consumer_log:config_file_name_prefix("ta"),
+ta_consumer_log:config_file_name_prefix("ta"),
 %% 配置日志文件的最大切片大小，单位Mb
-consumer_log:config_file_size(2),
+ta_consumer_log:config_file_size(2),
 %% 配置日志文件的划分格式，以天为单位，或者以小时为单位
-consumer_log:config_rotate_mode(consumer_log:rotate_mode_hour()),
+ta_consumer_log:config_rotate_mode(ta_consumer_log:rotate_mode_hour()),
 
-%% consumer_log 的配置完成之后，开始初始化 thinking_data 模块
+%% 配置完成之后，开始初始化 thinking_analytics_sdk 模块
 %% 初始化SDK，传入上报方式类型
-thinking_data:init(thinking_data:consumer_type_log()),
+thinking_analytics_sdk:init(thinking_analytics_sdk:consumer_type_log()),
 
-%% 发送普通事件
-thinking_data:track("account_id", "distinct_id", "EventName", #{"#ip" => "123.123.123.123"}),
+%% 普通事件
+thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"key_1" => "value_1", "key_2" => "value_2"}),
+
+%% 复杂数据类型
+thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"custom_property_1" => [#{"key_1" => "value_1"}, #{"key_2" => "value_2"}, #{"key_3_list" => ["a", "b", #{"child_key" => "child_value"}]}]}),
+
+%% ⚠️ 如果您的属性值有时间类型，请一定要用 ta_utils:format_time() 函数进行格式化，然后才能传入。例如：
+%% 包含时间的属性值
+thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"register_time" => ta_utils:format_time(os:timestamp())}),
 
 %% 关闭SDK时候需要调用。如果关闭后，需要再开启SDK时，必须重新执行上文的初始化代码。
-thinking_data:close().
+thinking_analytics_sdk:close().
 ```
 
-`consumer_log`将会批量实时地生成日志文件，文件默认以天切分，需要搭配 LogBus 进行上传。
+`ta_consumer_log`将会批量实时地生成日志文件，文件默认以天切分，需要搭配 LogBus 进行上传。
 
 需要调用`config_directory()` 函数来更改日志存储的目录，要注意文件目录的访问权限。您只需将 LogBus 的监听文件夹地址设置为此处的地址，即可使用 LogBus 进行数据的监听上传。
 
 
 
-(2)consumer_debug_batch：
+(2) ta_consumer_debug：
 
 ```Erlang
+
 %% 必须先调用init，SDK内部进行必要的初始化
-consumer_debug_batch:init(),
+ta_consumer_debug:init(),
 %% 配置上报地址
-consumer_debug_batch:config_server_url("http://ta_test.receiver.thinkingdata.cn"),
+ta_consumer_debug:config_server_url("server_url"),
 %% 配置app_id
-consumer_debug_batch:config_app_id("c636fb93fb854ffd961a6eed5316410b"),
+ta_consumer_debug:config_app_id("app_id"),
 %% 配置是否写入数据库
-consumer_debug_batch:config_is_write(false),
+ta_consumer_debug:config_is_write(true),
 
-%% consumer_debug_batch 的配置完成之后，开始初始化 thinking_data 模块
+%% 配置完成之后，开始初始化 thinking_analytics_sdk 模块
 %% 初始化SDK，传入上报方式类型
-thinking_data:init(thinking_data:consumer_type_debug_batch()),
+thinking_analytics_sdk:init(thinking_analytics_sdk:consumer_type_debug()),
 
-%% 发送普通事件
-thinking_data:track("account_id", "distinct_id", "EventName", #{"#ip" => "123.123.123.123"}),
+%% 普通事件
+thinking_analytics_sdk:track("account_id_Erlang", "distinct_id", "ViewProduct", #{"key_1" => "value_1", "key_2" => "value_2"}),
+
+%% 复杂数据类型
+thinking_analytics_sdk:track("account_id_Erlang", "distinct_id", "ViewProduct", #{"custom_property_1" => [#{"key_1" => "value_1"}, #{"key_2" => "value_2"}, #{"key_3_list" => ["a", "b", #{"child_key" => "child_value"}]}]}),
+
+%% ⚠️ 如果您的属性值有时间类型，请一定要用 ta_utils:format_time() 函数进行格式化，然后才能传入。例如：
+%% 包含时间的属性值
+thinking_analytics_sdk:track("account_id_Erlang", "distinct_id", "ViewProduct", #{"register_time" => ta_utils:format_time(os:timestamp())}),
 
 %% 关闭SDK时候需要调用。如果关闭后，需要再开启SDK时，必须重新执行上文的初始化代码。
-thinking_data:close().
+thinking_analytics_sdk:close().
+
+
 ```
 
 需要调用`config_server_url()`函数，配置传输数据的 URL。调用`config_app_id()`函数设置您项目的 APP ID。
@@ -100,7 +117,7 @@ thinking_data:close().
 %% 设置事件发生的时间，如果不设置的话，则默认使用为当前时间。注意：#time的类型必须是timestamp()类型
 
 %% 上报事件
-thinking_data:track("account_id", "distinct_id", "EventName", #{"#ip" => "123.123.123.123", "#time" => os:timestamp()}),
+thinking_analytics_sdk:track("account_id", "distinct_id", "EventName", #{"#ip" => "123.123.123.123", "#time" => os:timestamp()}),
 ```
 
 - 事件的名称是`strin``g()`类型，只能以字母开头，可包含数字，字母和下划线 “_”，长度最大为 50 个字符，对字母大小写不敏感。
@@ -108,6 +125,15 @@ thinking_data:track("account_id", "distinct_id", "EventName", #{"#ip" => "123.12
 - 自定义属性的 Key 的值为属性的名称，为 string 类型，规定只能以字母开头，包含数字，字母和下划线 “_”，长度最大为 50 个字符，对字母大小写不敏感。
 - 自定义属性的 Value 为该属性的值。
 
+### 2.2 时间属性
+如果您的属性值有时间类型，请一定要用 `ta_utils:format_time()` 函数进行格式化，然后才能传入。例如：
+
+```erlang
+
+%% 包含时间的属性值
+%%  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"register_time" => ta_utils:format_time(os:timestamp())}),
+
+```
 ## 三、用户属性
 
 ### 3.1 user_set
@@ -115,7 +141,7 @@ thinking_data:track("account_id", "distinct_id", "EventName", #{"#ip" => "123.12
 对于一般的用户属性，您可以调用`user_set`来进行设置，使用该接口上传的属性将会覆盖原有的属性值，如果之前不存在该用户属性，则会新建该用户属性，类型与传入属性的类型一致：
 
 ```Erlang
-thinking_data:user_set("account_id", "distinct_id", #{"age" => 18, "abc" => ["a", "b", "c"]}),
+thinking_analytics_sdk:user_set("account_id", "distinct_id", #{"age" => 18, "abc" => ["a", "b", "c"]}),
 ```
 
 > 属性格式要求与事件属性保持一致。
@@ -125,7 +151,7 @@ thinking_data:user_set("account_id", "distinct_id", #{"age" => 18, "abc" => ["a"
 如果您要上传的用户属性只要设置一次，则可以调用`user_setOnce`来进行设置，当该属性之前已经有值的时候，将会忽略这条信息：
 
 ```Erlang
-thinking_data:user_set_once("account_id", "distinct_id", #{"firstvalue" => 1}),
+thinking_analytics_sdk:user_set_once("account_id", "distinct_id", #{"firstvalue" => 1}),
 ```
 
 > 属性格式要求与事件属性保持一致。
@@ -135,7 +161,7 @@ thinking_data:user_set_once("account_id", "distinct_id", #{"firstvalue" => 1}),
 当您要上传数值型的属性时，您可以调用`user_add`来对该属性进行累加操作，如果该属性还未被设置，则会赋值 0 后再进行计算，可传入负值，等同于相减操作。
 
 ```Erlang
-thinking_data:user_add("account_id", "distinct_id", #{"amount" => 100}),
+thinking_analytics_sdk:user_add("account_id", "distinct_id", #{"amount" => 100}),
 ```
 
 > 设置的属性key为字符串，Value 只允许为数值。
@@ -145,7 +171,7 @@ thinking_data:user_add("account_id", "distinct_id", #{"amount" => 100}),
 如果您要删除某个用户，可以调用`user_del`将这名用户删除，您将无法再查询该名用户的用户属性，但该用户产生的事件仍然可以被查询到
 
 ```Erlang
-thinking_data:user_del("account_id", "distinct_id"),
+thinking_analytics_sdk:user_del("account_id", "distinct_id"),
 ```
 
 ### 3.5 user_append
@@ -153,7 +179,7 @@ thinking_data:user_del("account_id", "distinct_id"),
 您可以调用 `user_append` 对 array 类型的用户属性进行追加操作。
 
 ```Erlang
-thinking_data:user_append("account_id", "distinct_id", #{"array" => ["arr3", "arr4"]}),
+thinking_analytics_sdk:user_append("account_id", "distinct_id", #{"array" => ["arr3", "arr4"]}),
 ```
 
 ### 3.6 user_unset
@@ -161,7 +187,7 @@ thinking_data:user_append("account_id", "distinct_id", #{"array" => ["arr3", "ar
 当您需要清空某个用户的用户属性的值时，可以调用 `user_unset` 进行清空。
 
 ```Erlang
-thinking_data:user_unset("account_id", "distinct_id", ["age", "abc"]),
+thinking_analytics_sdk:user_unset("account_id", "distinct_id", ["age", "abc"]),
 ```
 
 > user_unset: 的传入值为被清空属性的 Key 值。
@@ -171,7 +197,7 @@ thinking_data:user_unset("account_id", "distinct_id", ["age", "abc"]),
 当您要为 list 类型追加用户属性值，但不希望出现重复值时，您可以调用 `ta_user_uniq_append` 来对指定属性进行追加操作，如果该属性还未在集群中被创建，则 `ta_user_uniq_append` 创建该属性
 
 ```Erlang
-thinking_data:user_unique_append("account_id", "distinct_id", #{"array" => ["arr3", "arr4", "arr5"]}),
+thinking_analytics_sdk:user_unique_append("account_id", "distinct_id", #{"array" => ["arr3", "arr4", "arr5"]}),
 ```
 
 ## 四、其他操作
@@ -180,7 +206,7 @@ thinking_data:user_unique_append("account_id", "distinct_id", #{"array" => ["arr
 
 ```Erlang
 %% 关闭SDK时候需要调用
-thinking_data:close()
+thinking_analytics_sdk:close()
 ```
 
 关闭并退出 sdk，**请在关闭服务器前调用本接口****。主要是为了释放ETS表里的数据**
@@ -248,3 +274,7 @@ thinking_analytics_sdk:track_first("account_id_Erlang", "distinct_id", EventName
 
 - 支持debug_consumer
 - 支持log_consumer
+
+### v1.1.0 2022/07/13
+
+- 自定义属性支持复杂数据类型
