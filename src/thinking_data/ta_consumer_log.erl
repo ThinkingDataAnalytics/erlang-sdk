@@ -136,17 +136,15 @@ current_time_string() ->
 
 validate_file_size(Directory, NewFileName) ->
   FilePath = string:concat(Directory, NewFileName),
-  %% 打开文件
-  {ok, File} = file:open(FilePath, [read, write]),
   %% 获取文件信息
-  {ok, Facts} = file:read_file_info(File),
+  {ok, Facts} = file:read_file_info(FilePath),
   %% 获取文件大小
   Size = Facts#file_info.size,
   ConfigSize = get_file_size(),
   if
     ConfigSize > 0 ->
       if
-        ConfigSize * 1024 =< Size -> false;
+        ConfigSize * 1024 * 1024 =< Size -> false;
         true -> true
       end;
     true -> true
@@ -172,13 +170,19 @@ validate_file_name(Directory, FileName, Index) ->
 search_file(Directory, FileName) ->
   case file:list_dir(Directory) of
     {ok, Files} ->
-      case lists:search(fun(X) -> X == FileName end, Files) of
-        {value, SearchResult} -> SearchResult;
-        false -> []
-      end;
+      find_file(Files, FileName);
     {error, _Files} -> []
   end.
 
+%% 查找数组中是否存在某个文件
+-spec find_file([], string()) -> string().
+find_file([], _FileName)->
+  [];
+find_file([H | T],FileName)->
+  case H == FileName of
+    true -> FileName;
+    _ -> find_file(T, FileName)
+  end.
 
 %% 获取格式化后的时间
 -spec time_format(erlang:timestamp()) -> calendar:datetime1970().
