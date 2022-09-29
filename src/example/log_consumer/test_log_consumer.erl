@@ -20,7 +20,7 @@ test() ->
   %% 配置写入文件的前缀
   ta_consumer_log:config_file_name_prefix("ta"),
   %% 配置日志文件的最大切片大小，单位Mb
-  ta_consumer_log:config_file_size(2),
+  ta_consumer_log:config_file_size(50),
   %% 配置日志文件的划分格式，以天为单位，或者以小时为单位
   ta_consumer_log:config_rotate_mode(ta_consumer_log:rotate_mode_hour()),
 
@@ -28,8 +28,13 @@ test() ->
   %% 初始化SDK，传入上报方式类型
   thinking_analytics_sdk:init(thinking_analytics_sdk:consumer_type_log()),
 
-  %% 普通事件
-  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"key_1" => "value_1", "key_2" => "value_2"}),
+  io:format(ta_utils:format_time(erlang:timestamp())),
+  for(100000, 1),
+  io:format(ta_utils:format_time(erlang:timestamp())),
+  loop(),
+
+%%  %% 普通事件
+%%  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"key_1" => "value_1", "key_2" => "value_2"}),
 %%  %% 复杂数据类型
 %%  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"custom_property_1" => [#{"key_1" => "value_1"}, #{"key_2" => "value_2"}, #{"key_3_list" => ["a", "b", #{"child_key" => "child_value"}]}]}),
 %%
@@ -56,5 +61,17 @@ test() ->
   thinking_analytics_sdk:close().
 
 
+for(0,_) ->
+  [];
+for(N,Term) when N > 0 ->
+  Time = ta_utils:format_time(erlang:timestamp()),
+  thinking_analytics_sdk:track(Time, "distinct_logbus", "ViewProduct", #{"key_1" => "value_1", "key_2" => "value_2"}),
+  [Term|for(N-1,Term)].
 
+loop() ->
+  receive
+  after
+    1000 ->
+      loop()
+  end.
 

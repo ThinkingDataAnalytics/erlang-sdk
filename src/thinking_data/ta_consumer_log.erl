@@ -28,8 +28,10 @@
 
 -type rotate_mode() :: rotate_daily | rotate_hour.
 
-%% logConsumer使用的ets表名
--define(TABLE, ta_table_log_consumer).
+%% logConsumer使用的配置文件 ets 表名
+-define(CONFIG_TABLE, ta_table_log_consumer).
+%% 数据采集事件的缓存 ets 表名
+-define(EVENT_TABLE, ta_table_event).
 
 -define(PATH, path).
 -define(ROTATE_MODE, rotate_mode).
@@ -47,7 +49,11 @@ rotate_mode_hour() ->
 -spec init() -> _.
 init() ->
   %% 创建ETS表
-  ets:new(?TABLE, [set, named_table, public]).
+  ets:new(?CONFIG_TABLE, [set, named_table, public]),
+  ets:new(?EVENT_TABLE, [set, named_table, public]),
+  %% 开启异步写入文件的循环
+  Pid = spawn(fun() -> loop_write_to_file() end),
+  register(tag_name_write, Pid).
 
 %% 配置路径
 -spec config_directory(string()) -> _.
@@ -95,14 +101,7 @@ get_file_name_prefix() ->
 
 -spec add(thinking_analytics_sdk:event()) -> _.
 add(E) ->
-  %% 拿到一个可用的文件名
-  FilePath = log_file_name(),
-  %% 打开文件
-  {ok, File} = file:open(FilePath, [read, write, append]),
-  %% 追加事件json字符串内容到文件
-  io:format(File, "~s~n", [E]),
-  %% 关闭文件
-  file:close(File).
+  add_event2ets(E).
 
 -spec log_file_name() -> string().
 log_file_name() ->
@@ -195,19 +194,23 @@ time_format(Time) ->
 %% 立即发送。暂时不需要调用
 -spec flush() -> _.
 flush() ->
-  [].
+  %% 立刻上报
+  write_to_file().
 
 %% 关闭SDK
 -spec close() -> _.
 close() ->
+  %% 立刻上报
+  write_to_file(),
   %% 删除ETS表
-  ets:delete(?TABLE).
+  ets:delete(?CONFIG_TABLE),
+  ets:delete(?EVENT_TABLE).
 
 %% 在 ets 中根据key设置value
 -spec set_value2ets(string(), string()) -> _.
 set_value2ets(Key, Value) ->
   try
-    ets:insert(?TABLE, {Key, Value})
+    ets:insert(?CONFIG_TABLE, {Key, Value})
   catch
     error:_ -> io:format("thinking data error: set value to ets failed key:~p .~n", [Key])
   end.
@@ -216,8 +219,53 @@ set_value2ets(Key, Value) ->
 -spec find_value_from_ets(string()) -> _.
 find_value_from_ets(Key) ->
   try
-    [{_, E}|_] = ets:lookup(?TABLE, Key),
+    [{_, E}|_] = ets:lookup(?CONFIG_TABLE, Key),
     E
   catch
     error:_ -> []
+  end.
+
+%% 添加事件到缓存
+-spec add_event2ets(string()) -> _.
+add_event2ets(Event) ->
+  try
+    ets:insert(?EVENT_TABLE, {Event})
+  catch
+    error:_ -> io:format("[thinking data] insert event to ets failed:~p .~n", [Event])
+  end.
+
+write_to_file() ->
+  %% 获取ETS 中所有缓存的数据
+  Records = ets:tab2list(?EVENT_TABLE),
+  if
+    length(Records) > 0 ->
+      %% 拿到一个可用的文件名
+      FilePath = log_file_name(),
+      %% 打开文件
+      {ok, File} = file:open(FilePath, [read, write, append]),
+      %% 写入文件
+      write_list(Records, File),
+      %% 关闭文件
+      file:close(File);
+    true -> []
+  end.
+
+%% 查找数组中是否存在某个文件
+-spec write_list([], file:fd()) -> _.
+write_list([], _)->
+  [];
+write_list([H | T], File)->
+  %% 删除数据
+  ets:delete_object(?EVENT_TABLE, H),
+  {Temp} = H,
+  %% 追加事件json字符串内容到文件
+  io:format(File, "~s~n", [Temp]),
+  write_list(T, File).
+
+loop_write_to_file() ->
+  write_to_file(),
+  receive
+  after
+    %% 间隔3s
+    3000 -> loop_write_to_file()
   end.

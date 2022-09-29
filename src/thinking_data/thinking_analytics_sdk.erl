@@ -45,7 +45,7 @@
 
 -define(FIRST_CHECK_ID, "#first_check_id").
 
--define(SDK_VERSION, "1.1.1").
+-define(SDK_VERSION, "1.1.2").
 -define(LIB_NAME, "Erlang").
 
 %% 函数名
