@@ -2,23 +2,111 @@
 
 本指南将会为您介绍如何使用 Erlang SDK 接入您的项目，您可以在访问 [GitHub](https://github.com/ThinkingDataAnalytics/erlang-sdk) 获取 SDK 的源代码。
 
-**最新版本为**：v1.1.2
+**最新版本为**：v1.1.3
 
-**更新时间为**：2022-09-29
+**更新时间为**：2022-10-18
 
 [Erlang SDK 下载地址](https://github.com/ThinkingDataAnalytics/erlang-sdk)
 
 ## 一、集成并初始化 SDK
 
-### 1.1 集成 SDK
-
-通过代码方式引入：下载 Erlang SDK，进行解压后可将 thinking_data 文件夹引入项目中，直接调用 SDK 对应的 module 进行使用。
-
-具体使用方式可以参考 SDK 中 example 文件夹中的示例文件。
 
 （1）ta_consumer_log： 批量实时写本地文件，默认以天为分隔，需要与 LogBus 搭配使用进行数据上传。
 
 （2）ta_consumer_debug： 逐条实时地向 TA 服务器传输数据，不需要搭配传输工具，如果数据出现错误，整条数据都将不会入库，并且返回详细的错误说明，不建议在生产环境中使用。
+
+具体使用方式可以参考 SDK 中 example 文件夹中的示例文件。
+
+
+### 1.1 集成 SDK
+
+#### v1.1.3 以及之后的新版本，采用 rebar3 引入：
+第一步：需要您的项目已经引入 rebar3 环境。
+
+第二步：修改您的 rebar.config 文件，添加对 thinkingdata_analytics SDK 的引用。
+
+``` Erlang
+{erl_opts, [debug_info,
+    {parse_transform, lager_transform} %% 使用 lager 库所必须的参数
+]}.
+
+{deps, [
+	%% 添加数数采集SDK
+    {thinkingdata_analytics, {git, "git@github.com:ThinkingDataAnalytics/erlang-sdk.git",{tag, "v1.1.3"}}}
+]}.
+
+{shell, [
+	%% 启用配置文件
+    {config, "config/sys.config"},
+    {apps, [app_3]}
+]}.
+
+```
+执行命令：
+
+``` shell
+$ rebar3 compile
+```
+
+第三步：修改您项目的配置文件，在您的配置文件中，添加对 lager 库的配置，主要是增加一个数数SDK单独使用的sink。
+
+```Erlang
+[
+  %% lager日志库配置
+  {lager, [
+    {colored, true},
+    {log_root, "./log"},
+    %% 这里增加一个数数SDK单独使用的sink，名字固定为：ta_logger_lager_event
+    {extra_sinks,
+      [
+        {ta_logger_lager_event,
+          [{handlers, [
+            {lager_file_backend, [
+              {file, "ta/ta.log"}, %% 配置采集数据的文件路径以及名字
+              {level, info},
+              {formatter, lager_default_formatter},
+              {formatter_config, [message, "\n"]},
+              {size, 10485760}, %% 单个文件的分页大小10Mb
+              {rotator, ta_lager_rotator} %% 自定义日志轮转
+            ]}]},
+            {async_threshold, 500},
+            {async_threshold_window, 50}
+          ]
+        }]
+    }
+  ]
+  }
+].
+```
+提示：在SDK目录中有示例文件 example_sys.config，可以参考示例配置。
+
+第四步：在您的app项目配置文件中配置启动参数。在 **.app.src 文件中添加数数SDK的启动项。
+
+``` Erlang
+{application, your_name,
+ [{description, "An OTP application"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {your_name_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    thinkingdata_analytics %% 这里添加数数SDK
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.
+
+```
+
+
+#### v1.1.2 以及之前的版本，采用源码引入：
+
+通过代码方式引入：下载 Erlang SDK，进行解压后可将 thinking_data 文件夹引入项目中，直接调用 SDK 对应的 module 进行使用。
+
 
 ### 1.2 初始化 SDK
 
@@ -29,14 +117,6 @@
 ```Erlang
 %% 必须先调用init，SDK内部进行必要的初始化
 ta_consumer_log:init(),
-%% 配置写入文件的路径
-ta_consumer_log:config_directory("/Users/Shared/log"),
-%% 配置写入文件的前缀
-ta_consumer_log:config_file_name_prefix("ta"),
-%% 配置日志文件的最大切片大小，单位Mb
-ta_consumer_log:config_file_size(2),
-%% 配置日志文件的划分格式，以天为单位，或者以小时为单位
-ta_consumer_log:config_rotate_mode(ta_consumer_log:rotate_mode_hour()),
 
 %% 配置完成之后，开始初始化 thinking_analytics_sdk 模块
 %% 初始化SDK，传入上报方式类型
@@ -286,3 +366,7 @@ thinking_analytics_sdk:track_first("account_id_Erlang", "distinct_id", EventName
 ### v1.1.2 2022/09/29
 
 - 优化文件IO性能
+
+### v1.1.3 2022/10/18
+
+- 使用包管理工具集成SDK
