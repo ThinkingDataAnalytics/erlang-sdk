@@ -2,7 +2,7 @@
 
 本指南将会为您介绍如何使用 Erlang SDK 接入您的项目，您可以在访问 [GitHub](https://github.com/ThinkingDataAnalytics/erlang-sdk) 获取 SDK 的源代码。
 
-**最新版本为**：v1.1.3
+**最新版本为**：v1.2.0
 
 **更新时间为**：2022-10-18
 
@@ -20,7 +20,7 @@
 
 ### 1.1 集成 SDK
 
-#### v1.1.3 以及之后的新版本，采用 rebar3 引入：
+#### v1.2.0 以及之后的新版本，采用 rebar3 引入：
 第一步：需要您的项目已经引入 rebar3 环境。
 
 第二步：修改您的 rebar.config 文件，添加对 thinkingdata_analytics SDK 的引用。
@@ -367,6 +367,6 @@ thinking_analytics_sdk:track_first("account_id_Erlang", "distinct_id", EventName
 
 - 优化文件IO性能
 
-### v1.1.3 2022/10/18
+### v1.2.0 2022/10/18
 
 - 使用包管理工具集成SDK
