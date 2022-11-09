@@ -2,9 +2,9 @@
 
 本指南将会为您介绍如何使用 Erlang SDK 接入您的项目，您可以在访问 [GitHub](https://github.com/ThinkingDataAnalytics/erlang-sdk) 获取 SDK 的源代码。
 
-**最新版本为**：v1.2.1
+**最新版本为**：v1.2.2
 
-**更新时间为**：2022-10-18
+**更新时间为**：2022-11-09
 
 [Erlang SDK 下载地址](https://github.com/ThinkingDataAnalytics/erlang-sdk)
 
@@ -372,3 +372,7 @@ thinking_analytics_sdk:track_first("account_id_Erlang", "distinct_id", EventName
 ### v1.2.1 2022/10/18
 
 - 使用包管理工具集成SDK
+
+### v1.2.2 2022/11/09
+
+- 支持 debug 模式调试

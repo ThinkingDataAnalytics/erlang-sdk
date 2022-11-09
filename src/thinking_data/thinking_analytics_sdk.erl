@@ -45,7 +45,7 @@
 
 -define(FIRST_CHECK_ID, "#first_check_id").
 
--define(SDK_VERSION, "1.2.1").
+-define(SDK_VERSION, "1.2.2").
 -define(LIB_NAME, "Erlang").
 
 %% 函数名
@@ -240,6 +240,9 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
               true -> UUID
             end,
 
+  %% 获取 properties 中 #app_id 值, 如不存在则返回 ""
+  {AppID, Map5} = filter_system_properties("#app_id", Map4),
+
   Event = #{
     "#account_id" => AccountId,
     "#distinct_id" => DistinctId,
@@ -250,7 +253,8 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
     "#first_check_id" => FirstCheckId,
     "#ip" => IP,
     "#uuid" => NewUUID,
-    "properties" => Map4
+    "#app_id" => AppID,
+    "properties" => Map5
   },
 
   %% 过滤空的value
@@ -361,5 +365,5 @@ find_function(Name) ->
     {_, Func} = maps:find(Name, E),
     Func
   catch
-    error:_ -> io:format("thinking data error: not match function.~n"), []
+    error:_ -> lager:info("thinking data error: not match function.~n"), []
   end.

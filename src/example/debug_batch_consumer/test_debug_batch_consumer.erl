@@ -19,6 +19,8 @@ test() ->
   ta_consumer_debug:config_server_url("server_url"),
   %% 配置app_id
   ta_consumer_debug:config_app_id("app_id"),
+  %% 配置device_id，用来在TA后台实时查看上报数据
+  ta_consumer_debug:config_device_id("device_id"),
   %% 配置是否写入数据库
   ta_consumer_debug:config_is_write(true),
 
