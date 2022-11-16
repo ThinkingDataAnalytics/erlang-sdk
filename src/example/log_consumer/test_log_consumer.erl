@@ -20,9 +20,13 @@ test() ->
   thinking_analytics_sdk:init(thinking_analytics_sdk:consumer_type_log()),
 
   %% 普通事件
-  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"key_1" => "value_1", "key_2" => "value_2"}),
+%%  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"key_1" => "value_1", "key_2" => "value_2"}),
+
+  %% 注意包含中文字符的写法，要指定编码格式
+    thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"key_1" => <<"中文的值"/utf8>>, "key_2" => <<"我是表情🙂"/utf8>>, "key_3" => <<"my name is hello"/utf8>>}),
+
 %%  %% 复杂数据类型
-%%  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"custom_property_1" => [#{"key_1" => "value_1"}, #{"key_2" => "value_2"}, #{"key_3_list" => ["a", "b", #{"child_key" => "child_value"}]}]}),
+%%  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"custom_property_1" => [#{"key_1" => "value_1"}, #{"key_2" => "value_2"}, #{"key_3_list" => ["a", "b", #{"child_key" => <<"汉字"/utf8>>}]}]}),
 %%
 %%  %% ⚠️ 如果您的属性值有时间类型，请一定要用 ta_utils:format_time() 函数进行格式化，然后才能传入。例如：
 %%  %% 包含时间的属性值

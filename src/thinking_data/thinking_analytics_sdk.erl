@@ -45,7 +45,7 @@
 
 -define(FIRST_CHECK_ID, "#first_check_id").
 
--define(SDK_VERSION, "1.2.2").
+-define(SDK_VERSION, "1.2.3").
 -define(LIB_NAME, "Erlang").
 
 %% 函数名
@@ -276,7 +276,7 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
   %% value 如果是string就转化成binary类型
   NewEvent = convert_string2binary(Event1),
   %% json 字符串
-  JsonEvent = binary_to_list(ta_thoas:encode(NewEvent)),
+  JsonEvent = binary_to_list(jsone:encode(NewEvent)),
   %% 调用consumer的add函数
   Add = find_function(?FUNC_ADD),
   if
@@ -293,7 +293,7 @@ convert_string2binary(Map) ->
                    %% 是否是字符串，区别list 与 字符串
                    case io_lib:printable_list(Value) of
                      false ->
-                       %% 字符串
+                       %% 非字符串
                        lists:map(fun(E) ->
                          if
                            is_map(E) -> convert_string2binary(E);
@@ -301,13 +301,13 @@ convert_string2binary(Map) ->
                          end
                                  end, Value);
                      true ->
-                       %% 非字符串
+                       %% 字符串
                        list_to_binary(Value)
                    end;
                  is_map(Value) -> convert_string2binary(Value);
                  true -> Value
                end,
-    AccIn#{Key => NewValue}
+    AccIn#{list_to_binary(Key) => NewValue}
             end, #{}, Map).
 
 %% 从属性字典中找到系统属性的值，并删除
@@ -365,5 +365,5 @@ find_function(Name) ->
     {_, Func} = maps:find(Name, E),
     Func
   catch
-    error:_ -> lager:info("thinking data error: not match function.~n"), []
+    error:_ -> lager:info("thinking data error: not match function.~n")
   end.
