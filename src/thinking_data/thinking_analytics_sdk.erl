@@ -45,7 +45,7 @@
 
 -define(FIRST_CHECK_ID, "#first_check_id").
 
--define(SDK_VERSION, "1.2.3").
+-define(SDK_VERSION, "1.2.4").
 -define(LIB_NAME, "Erlang").
 
 %% 函数名
@@ -290,22 +290,30 @@ convert_string2binary(Map) ->
   maps:fold(fun(Key, Value, AccIn) ->
     NewValue = if
                  is_list(Value) ->
-                   %% 是否是字符串，区别list 与 字符串
+                   %% 是否是字符串，区别 list 与字符串
                    case io_lib:printable_list(Value) of
                      false ->
-                       %% 非字符串
-                       lists:map(fun(E) ->
-                         if
-                           is_map(E) -> convert_string2binary(E);
-                           true -> list_to_binary(E)
-                         end
-                                 end, Value);
+                       %% 非字符串(但是包含 unicode 字符串)
+                       try
+                         %% 判断是否是 unicode 编码的字符串
+                         unicode:characters_to_binary(Value)
+                       catch
+                         error :_  ->
+                           %% 处理普通list
+                           lists:map(fun(E) ->
+                             if
+                               is_map(E) -> convert_string2binary(E);
+                               true -> list_to_binary(E)
+                             end
+                                     end, Value)
+                       end;
                      true ->
-                       %% 字符串
+                       %% 普通非unicode字符串
                        list_to_binary(Value)
                    end;
                  is_map(Value) -> convert_string2binary(Value);
-                 true -> Value
+                 true ->
+                   Value
                end,
     AccIn#{list_to_binary(Key) => NewValue}
             end, #{}, Map).
