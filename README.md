@@ -1,4 +1,4 @@
-#ThinkingData SDK for Eralang
+# ThinkingData SDK for Eralang
 
 This is the ThinkingData™ SDK for Erlang. Documentation is available on our help center in the following languages:
 
