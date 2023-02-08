@@ -4,7 +4,7 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 13. 7月 2022 12:05
+%%% Created : 13. 7Month 2022 12:05
 %%%-------------------------------------------------------------------
 -module(ta_utils).
 -author("ThinkingData").
@@ -12,7 +12,7 @@
 %% API
 -export([format_time/1]).
 
-%% 格式化时间
+%% formatTime
 -spec format_time(erlang:timestamp()) -> string().
 format_time(Time) ->
   {M, S, Micro} = Time,
@@ -27,15 +27,12 @@ format_time(Time) ->
   FormatMill = format_integer((Micro div 1000), 3, ""),
   lists:concat([Y, "-", FormatMonth, "-", FormatDay, " ", FormatHour, ":", FormatMinute, ":", FormatSecond, ".", FormatMill]).
 
-%% 输入Num数字，转化为Places位小数, Init为初始化字符串内容，一般为空字符串""
+%% convert number to string, and with N digits
 -spec format_integer(integer(), integer(), string()) -> string().
 format_integer(_Num, 0, Init) ->
   Init;
 format_integer(Num, Places, Init) ->
-  %% 进制位，当Places == 3, 那么就是10的2次方，表示100。
   Format = trunc(math:pow(10, Places - 1)),
-  %% 权重
   Weight = Num div Format,
-  %% 剩下的数字
   Unit = Num rem Format,
   format_integer(Unit, Places - 1, string:concat(Init, integer_to_list(Weight))).

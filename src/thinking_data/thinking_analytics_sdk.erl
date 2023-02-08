@@ -4,7 +4,7 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 16. 5月 2022 10:39
+%%% Created : 16. 5Month 2022 10:39
 %%%-------------------------------------------------------------------
 -module(thinking_analytics_sdk).
 -author("ThinkingData").
@@ -45,17 +45,17 @@
 
 -define(FIRST_CHECK_ID, "#first_check_id").
 
--define(SDK_VERSION, "1.2.4").
+-define(SDK_VERSION, "1.2.5").
 -define(LIB_NAME, "Erlang").
 
-%% 函数名
+%% common function name
 -define(FUNC_ADD, add).
 -define(FUNC_FLUSH, flush).
 -define(FUNC_CLOSE, close).
 
-%% consumer 类型
+%% log consumer
 -define(CONSUMER_TYPE_LOG, consumer_log).
-%% consumer 类型
+%% debug consumer
 -define( CONSUMER_TYPE_DEBUG, consumer_debug).
 
 -type consumer_type() :: ?CONSUMER_TYPE_LOG | ? CONSUMER_TYPE_DEBUG.
@@ -95,9 +95,9 @@ consumer_type_debug() ->
 
 -spec init(consumer_type()) -> _.
 init(Type) ->
-  %% 创建ETS表
+  %% create ETS table
   ets:new(?TA_TABLE, [set, named_table, public]),
-  %% 创建operation 数据，根据类型选择add/flush/close方法
+  %% init Operation. it store specific function whith different Consumer
   Operation = case Type of
                 ?CONSUMER_TYPE_LOG -> #{
                   ?FUNC_ADD => fun ta_consumer_log:add/1
@@ -113,12 +113,12 @@ init(Type) ->
               end,
   ets:insert(?TA_TABLE, {?TA_OPERATION, Operation}).
 
-%% 追踪一个普通事件
+%% ordinary event
 -spec track(account_id(), distinct_id(), event_name(), properties()) -> _.
 track(AccountId, DistinctId, EventName, Properties) ->
   internal_track(AccountId, DistinctId, ?TRACK, EventName, "", Properties).
 
-%% 首次事件
+%% first event
 -spec track_first(account_id(), distinct_id(), event_name(), first_check_id(), properties()) -> _.
 track_first(AccountId, DistinctId, EventName, FirstCheckId, Properties) ->
   if
@@ -128,111 +128,105 @@ track_first(AccountId, DistinctId, EventName, FirstCheckId, Properties) ->
     true -> throw("thinking data error: first_check_id not be nil.~n")
   end.
 
-%% 可更新事件
+%% updatable event
 -spec track_update(account_id(), distinct_id(), event_name(), event_id(), properties()) -> _.
 track_update(AccountId, DistinctId, EventName, EventId, Properties) ->
   internal_track(AccountId, DistinctId, ?TRACK_UPDATE, EventName, EventId, Properties).
 
-%% 可重写事件
+%% overwritable event
 -spec track_overwrite(account_id(), distinct_id(), event_name(), event_id(), properties()) -> _.
 track_overwrite(AccountId, DistinctId, EventName, EventId, Properties) ->
   internal_track(AccountId, DistinctId, ?TRACK_OVERWRITE, EventName, EventId, Properties).
 
-%% 所有track事件的处理函数
+%% process event
 -spec internal_track(account_id(), distinct_id(), event_type(), event_name(), event_id(), properties()) -> _.
 internal_track(AccountId, DistinctId, EventType, EventName, EventId, Properties) ->
-  %% EventName 不能为空
+  %% EventName not be null
   if
     length(EventName) =< 0 -> throw("thinking data error: the event name must be provided");
     true -> []
   end,
 
-  %% 只有eventType == Track 的时候才不需要eventId，否则eventId不能为空
+  %% eventId not be null unless eventType is equal Track.
   if
     EventType /= ?TRACK, length(EventId) =< 0 -> throw("thinking data error: the EventId must be provided");
     true -> []
   end,
 
-  %% 获取设置的公共属性
-  %% 获取设置的动态公共属性
-
-  %% 设置预制属性
+  %% set preset properties
   NewProperties = Properties#{"#lib" => ?LIB_NAME, "#lib_version" => ?SDK_VERSION},
 
-  %% 构造事件
+  %% generate event
   generate_event(AccountId, DistinctId, EventType, EventName, EventId, NewProperties).
 
-%% 设置用户属性. 如果同名属性已存在，则用传入的属性覆盖同名属性
+%% set user properties. would overwrite existing names
 -spec user_set(account_id(), distinct_id(), properties()) -> _.
 user_set(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_SET, Properties).
 
-%% 删除用户属性
+%% clear the user properties of users
 -spec user_unset(account_id(), distinct_id(), erlang:list()) -> _.
 user_unset(AccountId, DistinctId, PropertiesList) ->
   NewList = lists:map(fun(E) -> {E, 0} end, PropertiesList),
   Properties = maps:from_list(NewList),
   internal_user(AccountId, DistinctId, ?USER_UNSET, Properties).
 
-%% 设置用户属性. 不会覆盖同名属性.
+%% If such property had been set before, this message would be neglected.
 -spec user_set_once(account_id(), distinct_id(), properties()) -> _.
 user_set_once(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_SET_ONCE, Properties).
 
-%% 对数值类型的属性做累加操作
+%% to accumulate operations against the property
 -spec user_add(account_id(), distinct_id(), properties()) -> _.
 user_add(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_ADD, Properties).
 
-%% 对数组类型的属性做追加加操作
+%% to add user properties of array type
 -spec user_append(account_id(), distinct_id(), properties()) -> _.
 user_append(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_APPEND, Properties).
 
-%% 对数组类型的属性做追加加操作，对于重复元素进行去重处理
+%% add user properties of array type. delete duplicated user property
 -spec user_unique_append(account_id(), distinct_id(), properties()) -> _.
 user_unique_append(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_UNIQUE_APPEND, Properties).
 
-%% 删除用户数据, 之后无法查看用户属性, 但是之前已经入库的事件数据不会被删除. 此操作不可逆
+%% delete a user
 -spec user_del(account_id(), distinct_id()) -> _.
 user_del(AccountId, DistinctId) ->
   internal_user(AccountId, DistinctId, ?USER_DEL, #{}).
 
-%% 所有用户属性的操作函数
+%% process user properties
 -spec internal_user(account_id(), distinct_id(), event_type(), properties()) -> _.
 internal_user(AccountId, DistinctId, EventType, Properties) ->
-  %% 除了删除操作，否则属性不能为空
+  %% Properties don't be null unless EventType is equal USER_DEL
   if
     EventType /= ?USER_DEL, map_size(Properties) == 0 -> throw("thinking data error: Properties not be nil");
     true -> []
   end,
-  %% 构造事件
   generate_event(AccountId, DistinctId, EventType, "", "", Properties).
 
-%% 构造最终的event数据
+%% generate event
 -spec generate_event(account_id(), distinct_id(), event_type(), event_name(), event_id(), properties()) -> _.
 generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties) ->
-  %% accountId 和 distinctId 不能同时为空
+  %% accountId and distinctId cannot be both empty
   if
     length(AccountId) == 0, length(DistinctId) == 0 -> throw("thinking data error: account_id and distinct_id cannot be empty at the same time");
     true -> []
   end,
 
-  %% 从 properties 中过滤系统属性
-
-  %% 获取 properties 中 #ip 值, 如不存在则返回 ""
+  %% get "#ip" value in properties, empty string will be return when not found.
   {IP, Map1} = filter_system_properties("#ip", Properties),
 
-  %% 获取 properties 中 #time 值, 如不存在则返回当前时间
+  %% get "#time" value in properties, empty string will be return when not found.
   {ValueTime, Map2} = filter_time(Map1),
-  %% 格式化时间
+  %% format time
   Time = ta_utils:format_time(ValueTime),
 
-  %% 获取 properties 中 #first_check_id 值, 如不存在则返回 ""
+  %% get "#first_check_id" value in properties, empty string will be return when not found.
   {FirstCheckId, Map3} = filter_system_properties(?FIRST_CHECK_ID, Map2),
 
-  %% 如果上传#uuid， 只支持UUID标准格式xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx的string类型
+  %% get "#uuid" value in properties, empty string will be return when not found.
   {UUID, Map4} = filter_system_properties("#uuid", Map3),
 
   NewUUID = if
@@ -240,7 +234,7 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
               true -> UUID
             end,
 
-  %% 获取 properties 中 #app_id 值, 如不存在则返回 ""
+  %% get "#app_id" value in properties, empty string will be return when not found.
   {AppID, Map5} = filter_system_properties("#app_id", Map4),
 
   Event = #{
@@ -257,7 +251,7 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
     "properties" => Map5
   },
 
-  %% 过滤空的value
+  %% remove empty properties
   Event1 = maps:fold(fun(Key, Value, AccIn) ->
     NewValue = if
                  is_list(Value) ->
@@ -273,42 +267,40 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
     end
                      end, #{}, Event),
 
-  %% value 如果是string就转化成binary类型
   NewEvent = convert_string2binary(Event1),
-  %% json 字符串
   JsonEvent = binary_to_list(jsone:encode(NewEvent)),
-  %% 调用consumer的add函数
+  %% invoke Add function
   Add = find_function(?FUNC_ADD),
   if
     is_function(Add) -> Add(JsonEvent);
     true -> []
   end.
 
-%% 将Maps结构中value为string的类型，转化为binary类型。
+%% convert string to binary
 -spec convert_string2binary(#{}) -> #{}.
 convert_string2binary(Map) ->
   maps:fold(fun(Key, Value, AccIn) ->
     NewValue = if
                  is_list(Value) ->
-                   %% 是否是字符串，区别 list 与字符串
+                   %% is normal string or not
                    case io_lib:printable_list(Value) of
                      false ->
-                       %% 非字符串(但是包含 unicode 字符串)
-                       try
-                         %% 判断是否是 unicode 编码的字符串
-                         unicode:characters_to_binary(Value)
-                       catch
-                         error :_  ->
-                           %% 处理普通list
+                       %% not normal string (include unicode, and list)
+                       case io_lib:printable_unicode_list(Value) of
+                         false ->
+                           %% normal list
                            lists:map(fun(E) ->
                              if
                                is_map(E) -> convert_string2binary(E);
                                true -> list_to_binary(E)
                              end
-                                     end, Value)
+                                     end, Value);
+                         true ->
+                           %% is unicode
+                           unicode:characters_to_binary(Value)
                        end;
                      true ->
-                       %% 普通非unicode字符串
+                       %% string which not include unicode
                        list_to_binary(Value)
                    end;
                  is_map(Value) -> convert_string2binary(Value);
@@ -318,7 +310,6 @@ convert_string2binary(Map) ->
     AccIn#{list_to_binary(Key) => NewValue}
             end, #{}, Map).
 
-%% 从属性字典中找到系统属性的值，并删除
 -spec filter_system_properties(string(), #{}) -> {string(), #{}}.
 filter_system_properties(Key, Map) ->
   try
@@ -339,12 +330,10 @@ filter_time(Map) ->
     error:_ -> {os:timestamp(), Map}
   end.
 
-%% 创建一个uuid
 -spec generate_uuid() -> string().
 generate_uuid() ->
   ta_uuid:v4_string().
 
-%% 立即上报数据
 -spec flush() -> _.
 flush() ->
   Flush = find_function(?FUNC_FLUSH),
@@ -353,7 +342,6 @@ flush() ->
     true -> []
   end.
 
-%% 关闭SDK
 -spec close() -> _.
 close() ->
   Close = find_function(?FUNC_CLOSE),
@@ -362,10 +350,9 @@ close() ->
     true -> []
   end,
 
-  %% 删除ETS表
   ets:delete(?TA_TABLE).
 
-%% 在 ets 中查找策略对象，找到目标函数
+%% find truth function in strategy
 -spec find_function(string()) -> fun().
 find_function(Name) ->
   try

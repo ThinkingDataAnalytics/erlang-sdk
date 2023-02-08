@@ -4,7 +4,7 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 16. 5月 2022 10:40
+%%% Created : 16. 5Month 2022 10:40
 %%%-------------------------------------------------------------------
 -module(ta_consumer_log).
 -author("ThinkingData").
@@ -26,12 +26,12 @@ init() ->
 add(E) ->
   ta_logger:info(E).
 
-%% 立即发送。暂时不需要调用
+%% flush data immediately. don't need invoke.
 -spec flush() -> _.
 flush() ->
   ok.
 
-%% 关闭SDK
+%% close SDK
 -spec close() -> _.
 close() ->
   ok.

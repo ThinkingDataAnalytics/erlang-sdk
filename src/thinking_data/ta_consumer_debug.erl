@@ -4,7 +4,7 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 16. 5月 2022 10:40
+%%% Created : 16. 5Month 2022 10:40
 %%%-------------------------------------------------------------------
 -module(ta_consumer_debug).
 -author("ThinkingData").
@@ -20,7 +20,7 @@
   config_device_id/1
 ]).
 
-%% debugConsumer使用的ets表名
+%% ETS table names which debugConsumer used.
 -define(TABLE, ta_table_debug_consumer).
 
 -define(SERVER_URL, server_url).
@@ -28,7 +28,7 @@
 -define(DEVICE_ID, device_id).
 -define(IS_WRITE, is_write).
 
-%% 配置url
+%% config server url.
 -spec config_server_url(string()) -> _.
 config_server_url(Url) ->
   set_value2ets(?SERVER_URL, Url).
@@ -40,7 +40,7 @@ get_server_url() ->
     true -> throw("thinking data error: server url must not be nil!")
   end.
 
-%% 配置app_id
+%% config app_id.
 -spec config_app_id(string()) -> _.
 config_app_id(AppId) ->
   set_value2ets(?APP_ID, AppId).
@@ -52,7 +52,7 @@ get_app_id() ->
     true -> throw("thinking data error: app id url must not be nil!")
   end.
 
-%% 配置是否写入到数据库
+%% config is archive.
 -spec config_is_write(boolean()) -> _.
 config_is_write(IsWrite) ->
   set_value2ets(?IS_WRITE, IsWrite).
@@ -64,7 +64,7 @@ get_is_write() ->
     true -> true
   end.
 
-%% 配置 DeviceId
+%% config DeviceId.
 -spec config_device_id(string()) -> _.
 config_device_id(DeviceId) ->
   set_value2ets(?DEVICE_ID, DeviceId).
@@ -78,7 +78,7 @@ get_device_id() ->
 
 -spec init() -> _.
 init() ->
-  %% 创建ETS表
+  %% create ETS table.
   ets:new(?TABLE, [set, named_table, public]).
 
 -spec add(thinking_analytics_sdk:event()) -> _.
@@ -112,18 +112,18 @@ add(E) ->
 
   lager:info("result: ~s~n", [Result]).
 
-%% 立即发送。暂时不需要调用
+%% flush data immediately. don't need invoke.
 -spec flush() -> _.
 flush() ->
   [].
 
-%% 关闭SDK
+%% close SDK
 -spec close() -> _.
 close() ->
-  %% 删除ETS表
+  %% delete ETS table
   ets:delete(?TABLE).
 
-%% 在 ets 中根据key设置value
+%% set value for key to ETS
 -spec set_value2ets(string(), string()) -> _.
 set_value2ets(Key, Value) ->
   try
@@ -132,7 +132,7 @@ set_value2ets(Key, Value) ->
     error:_ -> lager:error("thinking data error: set value to ets failed key:~p .~n", [Key])
   end.
 
-%% 在 ets 中根据key查找value
+%% find value whith key in ETS
 -spec find_value_from_ets(string()) -> _.
 find_value_from_ets(Key) ->
   try
