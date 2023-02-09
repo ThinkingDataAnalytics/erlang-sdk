@@ -45,7 +45,7 @@
 
 -define(FIRST_CHECK_ID, "#first_check_id").
 
--define(SDK_VERSION, "1.2.5").
+-define(SDK_VERSION, "1.2.6").
 -define(LIB_NAME, "Erlang").
 
 %% common function name
@@ -268,7 +268,7 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
                      end, #{}, Event),
 
   NewEvent = convert_string2binary(Event1),
-  JsonEvent = binary_to_list(jsone:encode(NewEvent)),
+  JsonEvent = binary_to_list(jsone:encode(NewEvent, [{float_format, [{decimals, 11}, compact]}])),
   %% invoke Add function
   Add = find_function(?FUNC_ADD),
   if
@@ -277,32 +277,43 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
   end.
 
 %% convert string to binary
+-spec convert_list2binary([]) -> #{}.
+convert_list2binary(Value) ->
+  if
+    is_list(Value) ->
+      %% is normal string or not
+      case io_lib:printable_list(Value) of
+        false ->
+          %% not normal string (include unicode, and list)
+          case io_lib:printable_unicode_list(Value) of
+            false ->
+              %% normal list
+              lists:map(fun(E) ->
+                if
+                  is_list(E) -> convert_list2binary(E);
+                  is_map(E) -> convert_string2binary(E);
+                  true -> list_to_binary(E)
+                end
+                        end, Value);
+            true ->
+              %% is unicode
+              unicode:characters_to_binary(Value)
+          end;
+        true ->
+          %% string which not include unicode
+          list_to_binary(Value)
+      end;
+    is_map(Value) ->
+      convert_string2binary(Value);
+    true -> Value
+  end.
+
+%% convert string to binary
 -spec convert_string2binary(#{}) -> #{}.
 convert_string2binary(Map) ->
   maps:fold(fun(Key, Value, AccIn) ->
     NewValue = if
-                 is_list(Value) ->
-                   %% is normal string or not
-                   case io_lib:printable_list(Value) of
-                     false ->
-                       %% not normal string (include unicode, and list)
-                       case io_lib:printable_unicode_list(Value) of
-                         false ->
-                           %% normal list
-                           lists:map(fun(E) ->
-                             if
-                               is_map(E) -> convert_string2binary(E);
-                               true -> list_to_binary(E)
-                             end
-                                     end, Value);
-                         true ->
-                           %% is unicode
-                           unicode:characters_to_binary(Value)
-                       end;
-                     true ->
-                       %% string which not include unicode
-                       list_to_binary(Value)
-                   end;
+                 is_list(Value) -> convert_list2binary(Value);
                  is_map(Value) -> convert_string2binary(Value);
                  true ->
                    Value

@@ -28,10 +28,10 @@ test() ->
   thinking_analytics_sdk:init(thinking_analytics_sdk:consumer_type_debug()),
 
   %% ordinary event
-  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"key_1" => "value_1", "key_2" => "value_2", "key_array" => ["a", "b", "c"]}),
+  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"key_1" => "中文", "key_2" => "value_2", "key_3" => ["a", "b"], "key_4" => #{"name" => "xiao"}, "key_array" => ["中", "a", "abc", "🏍", "😚😊"]}),
 
   %% nested properties event
-  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"custom_property_1" => [#{"key_1" => "value_1"}, #{"key_2" => "value_2"}, #{"key_3_list" => ["a", "b", #{"unicode_key" => "🙂🆒😊"}]}]}),
+  thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"custom_property_1" => [#{"key_1" => "value_1"},  #{"key_3_list" => ["a", "b"]}, #{"key_2" => "value_2", "key_3" => #{"key_1" => 2.123456789, "key_2" => false, "key_3" => 2}} ]}),
 
   %% ordinary event
 %%  thinking_analytics_sdk:track("account_id_Erlang", "distinct_id", "ViewProduct", #{"key_1" => "value_1", "key_2" => "value_2"}),
