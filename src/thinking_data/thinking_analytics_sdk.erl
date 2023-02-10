@@ -45,7 +45,7 @@
 
 -define(FIRST_CHECK_ID, "#first_check_id").
 
--define(SDK_VERSION, "1.2.6").
+-define(SDK_VERSION, "1.2.7").
 -define(LIB_NAME, "Erlang").
 
 %% common function name
@@ -292,7 +292,7 @@ convert_list2binary(Value) ->
                 if
                   is_list(E) -> convert_list2binary(E);
                   is_map(E) -> convert_string2binary(E);
-                  true -> list_to_binary(E)
+                  true -> E
                 end
                         end, Value);
             true ->

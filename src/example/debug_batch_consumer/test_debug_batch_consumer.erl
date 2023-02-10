@@ -27,6 +27,9 @@ test() ->
   %% init SDK with Consumer
   thinking_analytics_sdk:init(thinking_analytics_sdk:consumer_type_debug()),
 
+  Name = <<228,184,173,230,150,135,95,97,95,49,50,51>>,
+  thinking_analytics_sdk:user_set("account_id_Erlang", "distinct_id", #{"id" => 12, "key_1" => [1,1,1,1], "key_2" => ["a", "b"], "key_3" => ["中", "文"], "key_4" => ["中文", "list"], "key_5" => "中文字符串", "amount" => 7.123, "nickName" => Name}),
+
   %% ordinary event
   thinking_analytics_sdk:track("account_id_Erlang", "distinct_logbus", "ViewProduct", #{"key_1" => "中文", "key_2" => "value_2", "key_3" => ["a", "b"], "key_4" => #{"name" => "xiao"}, "key_array" => ["中", "a", "abc", "🏍", "😚😊"]}),
 
