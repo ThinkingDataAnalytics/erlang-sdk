@@ -10,7 +10,7 @@
 -author("ThinkingData").
 
 %% API
--export([format_time/1]).
+-export([format_time/1, for/3]).
 
 %% formatTime
 -spec format_time(erlang:timestamp()) -> string().
@@ -36,3 +36,8 @@ format_integer(Num, Places, Init) ->
   Weight = Num div Format,
   Unit = Num rem Format,
   format_integer(Unit, Places - 1, string:concat(Init, integer_to_list(Weight))).
+
+for(N, N, _) -> ok;
+for(I, N, Func) when I < N ->
+  Func(I),
+  for(I+1, N, Func).
