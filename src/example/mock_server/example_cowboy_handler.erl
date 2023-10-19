@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------
-%%% @author ios_m
+%%% @author ThinkingData
 %%% @copyright (C) 2023, <COMPANY>
 %%% @doc
-%%%
+%%% Example
 %%% @end
 %%% Created : 22. 3月 2023 21:21
 %%%-------------------------------------------------------------------
--module(te_cowboy_handler).
--author("ios_m").
+-module(example_cowboy_handler).
+-author("ThinkingData").
 
 -import(lists,[nth/2]).
 

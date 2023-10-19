@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 22. 5Month 2022 10:19
 %%%-------------------------------------------------------------------
--module(ta_uuid).
+-module(td_uuid).
 -author("ThinkingData").
 
 %% API

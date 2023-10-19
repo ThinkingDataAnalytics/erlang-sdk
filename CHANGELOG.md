@@ -1,3 +1,10 @@
+### v2.0.0
+**Date:** 2023/09/19
+
+**Notes:**
+
+* Modified the naming convention, incompatible with older versions
+
 ### v1.3.0
 **Date:** 2023/03/21
 

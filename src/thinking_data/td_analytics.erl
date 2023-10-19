@@ -2,14 +2,14 @@
 %%% @author ThinkingData
 %%% @copyright (C) 2022, <COMPANY>
 %%% @doc
-%%%
+%%% SDK entry
 %%% @end
 %%% Created : 16. 5Month 2022 10:39
 %%%-------------------------------------------------------------------
--module(thinking_analytics_sdk).
+-module(td_analytics).
 -author("ThinkingData").
 
--include("thinking_engine_sdk.hrl").
+-include("td_analytics.hrl").
 
 %% API
 -export([
@@ -63,17 +63,14 @@
 
 -define(FIRST_CHECK_ID, "#first_check_id").
 
--define(SDK_VERSION, "1.3.0").
+-define(SDK_VERSION, "2.0.0").
 -define(LIB_NAME, "Erlang").
 
-%% common function name
 -define(FUNC_ADD, add).
 -define(FUNC_FLUSH, flush).
 -define(FUNC_CLOSE, close).
 
-%% log consumer
 -define(CONSUMER_TYPE_LOG, consumer_log).
-%% debug consumer
 -define( CONSUMER_TYPE_DEBUG, consumer_debug).
 
 -type consumer_type() :: ?CONSUMER_TYPE_LOG | ? CONSUMER_TYPE_DEBUG.
@@ -82,14 +79,20 @@
                       , ?FUNC_FLUSH => fun()
                       , ?FUNC_CLOSE => fun()
                       }.
+-type td_analytics() :: #td_analytics{}.
 
--type te_sdk() :: #te_sdk{}.
 -type account_id() :: string().
+
 -type distinct_id() :: string().
+
 -type event_name() :: string().
+
 -type first_check_id() :: string().
+
 -type properties() :: map().
+
 -type event_type() :: string().
+
 -type event_id() :: string().
 
 -type event() :: #{ eventName => event_name()
@@ -104,40 +107,43 @@
                   , properties => properties()
                   }.
 
--spec consumer_type_log() -> _.
+%% @doc Get consumer type: log
+-spec consumer_type_log() -> term().
 consumer_type_log() ->
   ?CONSUMER_TYPE_LOG.
 
--spec consumer_type_debug() -> _.
+%% @doc Get consumer type: debug
+-spec consumer_type_debug() -> term().
 consumer_type_debug() ->
   ?CONSUMER_TYPE_DEBUG.
 
+%% @doc Init SDK
 -spec init(consumer_type()) -> _.
 init(Type) ->
   %% create ETS table
   ets:new(?TA_TABLE, [set, named_table, public]),
-  %% init Operation. it store specific function whith different Consumer
+  %% init Operation. it store specific function which different Consumer
   Operation = case Type of
                 ?CONSUMER_TYPE_LOG -> #{
-                  ?FUNC_ADD => fun ta_consumer_log:add/1
-                  , ?FUNC_FLUSH => fun ta_consumer_log:flush/0
-                  , ?FUNC_CLOSE => fun ta_consumer_log:close/0
+                  ?FUNC_ADD => fun td_log_consumer:add/1
+                  , ?FUNC_FLUSH => fun td_log_consumer:flush/0
+                  , ?FUNC_CLOSE => fun td_log_consumer:close/0
                 };
                 ?CONSUMER_TYPE_DEBUG -> #{
-                  ?FUNC_ADD => fun ta_consumer_debug:add/1
-                  , ?FUNC_FLUSH => fun ta_consumer_debug:flush/0
-                  , ?FUNC_CLOSE => fun ta_consumer_debug:close/0
+                  ?FUNC_ADD => fun td_debug_consumer:add/1
+                  , ?FUNC_FLUSH => fun td_debug_consumer:flush/0
+                  , ?FUNC_CLOSE => fun td_debug_consumer:close/0
                 };
                 _ -> #{}
               end,
   ets:insert(?TA_TABLE, {?TA_OPERATION, Operation}).
 
-%% ordinary event
+%% @doc Ordinary event
 -spec track(account_id(), distinct_id(), event_name(), properties()) -> _.
 track(AccountId, DistinctId, EventName, Properties) ->
   internal_track(AccountId, DistinctId, ?TRACK, EventName, "", Properties).
 
-%% first event
+%% @doc First event
 -spec track_first(account_id(), distinct_id(), event_name(), first_check_id(), properties()) -> _.
 track_first(AccountId, DistinctId, EventName, FirstCheckId, Properties) ->
   NewFirstCheckId = format2string(FirstCheckId),
@@ -148,53 +154,54 @@ track_first(AccountId, DistinctId, EventName, FirstCheckId, Properties) ->
     true -> throw("thinking data error: first_check_id not be nil.~n")
   end.
 
-%% updatable event
+%% @doc Updatable event
 -spec track_update(account_id(), distinct_id(), event_name(), event_id(), properties()) -> _.
 track_update(AccountId, DistinctId, EventName, EventId, Properties) ->
   internal_track(AccountId, DistinctId, ?TRACK_UPDATE, EventName, EventId, Properties).
 
-%% overwritable event
+%% @doc Overwrite event
 -spec track_overwrite(account_id(), distinct_id(), event_name(), event_id(), properties()) -> _.
 track_overwrite(AccountId, DistinctId, EventName, EventId, Properties) ->
   internal_track(AccountId, DistinctId, ?TRACK_OVERWRITE, EventName, EventId, Properties).
 
-%% set user properties. would overwrite existing names
+%% @doc Set user properties. would overwrite existing names
 -spec user_set(account_id(), distinct_id(), properties()) -> _.
 user_set(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_SET, Properties).
 
-%% clear the user properties of users
+%% @doc Clear the user properties of users
 -spec user_unset(account_id(), distinct_id(), erlang:list()) -> _.
 user_unset(AccountId, DistinctId, PropertiesList) ->
   NewList = lists:map(fun(E) -> {E, 0} end, PropertiesList),
   Properties = maps:from_list(NewList),
   internal_user(AccountId, DistinctId, ?USER_UNSET, Properties).
 
-%% If such property had been set before, this message would be neglected.
+%% @doc If such property had been set before, this message would be neglected.
 -spec user_set_once(account_id(), distinct_id(), properties()) -> _.
 user_set_once(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_SET_ONCE, Properties).
 
-%% to accumulate operations against the property
+%% @doc To accumulate operations against the property
 -spec user_add(account_id(), distinct_id(), properties()) -> _.
 user_add(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_ADD, Properties).
 
-%% to add user properties of array type
+%% @doc To add user properties of array type
 -spec user_append(account_id(), distinct_id(), properties()) -> _.
 user_append(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_APPEND, Properties).
 
-%% add user properties of array type. delete duplicated user property
+%% @doc Add user properties of array type. delete duplicated user property
 -spec user_unique_append(account_id(), distinct_id(), properties()) -> _.
 user_unique_append(AccountId, DistinctId, Properties) ->
   internal_user(AccountId, DistinctId, ?USER_UNIQUE_APPEND, Properties).
 
-%% delete a user
+%% @doc Delete a user
 -spec user_del(account_id(), distinct_id()) -> _.
 user_del(AccountId, DistinctId) ->
   internal_user(AccountId, DistinctId, ?USER_DEL, #{}).
 
+%% @doc Flush data
 -spec flush() -> _.
 flush() ->
   Flush = find_function(?FUNC_FLUSH),
@@ -203,6 +210,7 @@ flush() ->
     true -> []
   end.
 
+%% @doc Close SDK
 -spec close() -> _.
 close() ->
   Close = find_function(?FUNC_CLOSE),
@@ -214,28 +222,29 @@ close() ->
 
 %% V2 API. support multiple instance.
 
+%% @doc (API_v2) Init SDK. Return td_analytics record
 -spec init_with_consumer(#{}) -> _.
 init_with_consumer(Consumer) ->
   if
-    is_record(Consumer, te_log_consumer) ->
+    is_record(Consumer, td_log_consumer) ->
       io:format("TE init log consumer. ~n"),
-      #te_sdk{consumer = Consumer, fun_add = fun ta_consumer_log:add_with_instance/2, fun_flush = fun ta_consumer_log:flush_with_instance/1, fun_close = fun ta_consumer_log:close_with_instance/1};
+      #td_analytics{consumer = Consumer, fun_add = fun td_log_consumer:add_with_instance/2, fun_flush = fun td_log_consumer:flush_with_instance/1, fun_close = fun td_log_consumer:close_with_instance/1};
     true ->
       if
-        is_record(Consumer, te_debug_consumer) ->
+        is_record(Consumer, td_debug_consumer) ->
           io:format("TE init debug consumer.~n"),
-          #te_sdk{consumer = Consumer, fun_add = fun ta_consumer_debug:add_with_instance/2, fun_flush = fun ta_consumer_debug:flush_with_instance/1, fun_close = fun ta_consumer_debug:close_with_instance/1};
+          #td_analytics{consumer = Consumer, fun_add = fun td_debug_consumer:add_with_instance/2, fun_flush = fun td_debug_consumer:flush_with_instance/1, fun_close = fun td_debug_consumer:close_with_instance/1};
         true -> throw("TE Consumer error. ~n")
       end
   end.
 
-%% ordinary event
--spec track_instance(te_sdk(), account_id(), distinct_id(), event_name(), properties()) -> _.
+%% @doc (API_v2) Ordinary event
+-spec track_instance(td_analytics(), account_id(), distinct_id(), event_name(), properties()) -> _.
 track_instance(Instance, AccountId, DistinctId, EventName, Properties) ->
   internal_track_instance(Instance, AccountId, DistinctId, ?TRACK, EventName, "", Properties).
 
-%% first event
--spec track_first_instance(te_sdk(), account_id(), distinct_id(), event_name(), first_check_id(), properties()) -> _.
+%% @doc (API_v2) First event
+-spec track_first_instance(td_analytics(), account_id(), distinct_id(), event_name(), first_check_id(), properties()) -> _.
 track_first_instance(Instance, AccountId, DistinctId, EventName, FirstCheckId, Properties) ->
   NewFirstCheckId = format2string(FirstCheckId),
   if
@@ -245,66 +254,68 @@ track_first_instance(Instance, AccountId, DistinctId, EventName, FirstCheckId, P
     true -> throw("thinking data error: first_check_id not be nil.~n")
   end.
 
-%% updatable event
--spec track_update_instance(te_sdk(), account_id(), distinct_id(), event_name(), event_id(), properties()) -> _.
+%% @doc (API_v2) Updatable event
+-spec track_update_instance(td_analytics(), account_id(), distinct_id(), event_name(), event_id(), properties()) -> _.
 track_update_instance(Instance, AccountId, DistinctId, EventName, EventId, Properties) ->
   internal_track_instance(Instance, AccountId, DistinctId, ?TRACK_UPDATE, EventName, EventId, Properties).
 
-%% overwrite event
--spec track_overwrite_instance(te_sdk(), account_id(), distinct_id(), event_name(), event_id(), properties()) -> _.
+%% @doc (API_v2) Overwrite event
+-spec track_overwrite_instance(td_analytics(), account_id(), distinct_id(), event_name(), event_id(), properties()) -> _.
 track_overwrite_instance(Instance, AccountId, DistinctId, EventName, EventId, Properties) ->
   internal_track_instance(Instance, AccountId, DistinctId, ?TRACK_OVERWRITE, EventName, EventId, Properties).
 
-%% set user properties. would overwrite existing names
--spec user_set_instance(te_sdk(), account_id(), distinct_id(), properties()) -> _.
+%% @doc (API_v2) Set user properties. would overwrite existing names
+-spec user_set_instance(td_analytics(), account_id(), distinct_id(), properties()) -> _.
 user_set_instance(Instance, AccountId, DistinctId, Properties) ->
   internal_user_instance(Instance, AccountId, DistinctId, ?USER_SET, Properties).
 
-%% clear the user properties of users
--spec user_unset_instance(te_sdk(), account_id(), distinct_id(), erlang:list()) -> _.
+%% @doc (API_v2) Clear the user properties of users
+-spec user_unset_instance(td_analytics(), account_id(), distinct_id(), erlang:list()) -> _.
 user_unset_instance(Instance, AccountId, DistinctId, PropertiesList) ->
   NewList = lists:map(fun(E) -> {E, 0} end, PropertiesList),
   Properties = maps:from_list(NewList),
   internal_user_instance(Instance, AccountId, DistinctId, ?USER_UNSET, Properties).
 
-%% If such property had been set before, this message would be neglected.
--spec user_set_once_instance(te_sdk(), account_id(), distinct_id(), properties()) -> _.
+%% @doc (API_v2) If such property had been set before, this message would be neglected.
+-spec user_set_once_instance(td_analytics(), account_id(), distinct_id(), properties()) -> _.
 user_set_once_instance(Instance, AccountId, DistinctId, Properties) ->
   internal_user_instance(Instance, AccountId, DistinctId, ?USER_SET_ONCE, Properties).
 
-%% to accumulate operations against the property
--spec user_add_instance(te_sdk(), account_id(), distinct_id(), properties()) -> _.
+%% @doc (API_v2) To accumulate operations against the property
+-spec user_add_instance(td_analytics(), account_id(), distinct_id(), properties()) -> _.
 user_add_instance(Instance, AccountId, DistinctId, Properties) ->
   internal_user_instance(Instance, AccountId, DistinctId, ?USER_ADD, Properties).
 
-%% to add user properties of array type
--spec user_append_instance(te_sdk(), account_id(), distinct_id(), properties()) -> _.
+%% @doc (API_v2) To add user properties of array type
+-spec user_append_instance(td_analytics(), account_id(), distinct_id(), properties()) -> _.
 user_append_instance(Instance, AccountId, DistinctId, Properties) ->
   internal_user_instance(Instance, AccountId, DistinctId, ?USER_APPEND, Properties).
 
-%% add user properties of array type. delete duplicated user property
--spec user_unique_append_instance(te_sdk(), account_id(), distinct_id(), properties()) -> _.
+%% @doc (API_v2) Add user properties of array type. delete duplicated user property
+-spec user_unique_append_instance(td_analytics(), account_id(), distinct_id(), properties()) -> _.
 user_unique_append_instance(Instance, AccountId, DistinctId, Properties) ->
   internal_user_instance(Instance, AccountId, DistinctId, ?USER_UNIQUE_APPEND, Properties).
 
-%% delete a user
--spec user_del_instance(te_sdk(), account_id(), distinct_id()) -> _.
+%% @doc (API_v2) Delete a user
+-spec user_del_instance(td_analytics(), account_id(), distinct_id()) -> _.
 user_del_instance(Instance, AccountId, DistinctId) ->
   internal_user_instance(Instance, AccountId, DistinctId, ?USER_DEL, #{}).
 
--spec flush_instance(#te_sdk{}) -> _.
+%% @doc (API_v2) Flush data
+-spec flush_instance(td_analytics()) -> _.
 flush_instance(SDK) ->
-  Flush = SDK#te_sdk.fun_flush,
-  Flush(SDK#te_sdk.consumer).
+  Flush = SDK#td_analytics.fun_flush,
+  Flush(SDK#td_analytics.consumer).
 
--spec close_instance(#te_sdk{}) -> _.
+%% @doc (API_v2) Close SDK
+-spec close_instance(td_analytics()) -> _.
 close_instance(SDK) ->
-  Close = SDK#te_sdk.fun_close,
-  Close(SDK#te_sdk.consumer).
+  Close = SDK#td_analytics.fun_close,
+  Close(SDK#td_analytics.consumer).
 
 %% Private methods
 
-%% process event
+%% Process event
 -spec internal_track(account_id(), distinct_id(), event_type(), event_name(), event_id(), properties()) -> _.
 internal_track(AccountId, DistinctId, EventType, EventName, EventId, Properties) ->
   validate_track_event(AccountId, DistinctId, EventType, EventName, EventId),
@@ -319,8 +330,8 @@ internal_track(AccountId, DistinctId, EventType, EventName, EventId, Properties)
     true -> []
   end.
 
-%% process event
--spec internal_track_instance(te_sdk(), account_id(), distinct_id(), event_type(), event_name(), event_id(), properties()) -> _.
+%% Process event
+-spec internal_track_instance(td_analytics(), account_id(), distinct_id(), event_type(), event_name(), event_id(), properties()) -> _.
 internal_track_instance(Instance, AccountId, DistinctId, EventType, EventName, EventId, Properties) ->
   validate_track_event(AccountId, DistinctId, EventType, EventName, EventId),
   %% set preset properties
@@ -328,13 +339,13 @@ internal_track_instance(Instance, AccountId, DistinctId, EventType, EventName, E
   %% generate event
   JsonEvent = generate_event(AccountId, DistinctId, EventType, EventName, EventId, NewProperties),
   %% invoke Add function
-  Add = Instance#te_sdk.fun_add,
+  Add = Instance#td_analytics.fun_add,
   if
-    is_function(Add) -> Add(Instance#te_sdk.consumer, JsonEvent);
+    is_function(Add) -> Add(Instance#td_analytics.consumer, JsonEvent);
     true -> []
   end.
 
-%% process user properties
+%% Process user properties
 -spec internal_user(account_id(), distinct_id(), event_type(), properties()) -> _.
 internal_user(AccountId, DistinctId, EventType, Properties) ->
   %% Properties don't be null unless EventType is equal USER_DEL
@@ -350,8 +361,8 @@ internal_user(AccountId, DistinctId, EventType, Properties) ->
     true -> []
   end.
 
-%% process user properties
--spec internal_user_instance(te_sdk(), account_id(), distinct_id(), event_type(), properties()) -> _.
+%% Process user properties
+-spec internal_user_instance(td_analytics(), account_id(), distinct_id(), event_type(), properties()) -> _.
 internal_user_instance(Instance, AccountId, DistinctId, EventType, Properties) ->
   %% Properties don't be null unless EventType is equal USER_DEL
   if
@@ -360,13 +371,13 @@ internal_user_instance(Instance, AccountId, DistinctId, EventType, Properties) -
   end,
   JsonEvent = generate_event(AccountId, DistinctId, EventType, "", "", Properties),
   %% invoke Add function
-  Add = Instance#te_sdk.fun_add,
+  Add = Instance#td_analytics.fun_add,
   if
-    is_function(Add) -> Add(Instance#te_sdk.consumer, JsonEvent);
+    is_function(Add) -> Add(Instance#td_analytics.consumer, JsonEvent);
     true -> []
   end.
 
-%% generate event
+%% Generate event
 -spec generate_event(account_id(), distinct_id(), event_type(), event_name(), event_id(), properties()) -> _.
 generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties) ->
   %% accountId and distinctId cannot be both empty
@@ -381,7 +392,7 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
   %% get "#time" value in properties, empty string will be return when not found.
   {ValueTime, Map2} = filter_time(Map1),
   %% format time
-  Time = ta_utils:format_time(ValueTime),
+  Time = td_utils:format_time(ValueTime),
 
   %% get "#first_check_id" value in properties, empty string will be return when not found.
   {FirstCheckId, Map3} = filter_system_properties(?FIRST_CHECK_ID, Map2),
@@ -431,7 +442,7 @@ generate_event(AccountId, DistinctId, EventType, EventName, EventId, Properties)
   JsonEvent = binary_to_list(jsone:encode(NewEvent, [{float_format, [{decimals, 11}, compact]}])),
   JsonEvent.
 
-%% convert string to binary
+%% Convert string to binary
 -spec convert_list2binary([]) -> binary().
 convert_list2binary(Value) ->
   if
@@ -463,7 +474,7 @@ convert_list2binary(Value) ->
     true -> Value
   end.
 
-%% convert string to binary
+%% Convert string to binary
 -spec convert_string2binary(#{}) -> #{}.
 convert_string2binary(Map) ->
   maps:fold(fun(Key, Value, AccIn) ->
@@ -476,6 +487,7 @@ convert_string2binary(Map) ->
     AccIn#{convert_list2binary(Key) => NewValue}
             end, #{}, Map).
 
+%% Filter system properties
 -spec filter_system_properties(string(), #{}) -> {string(), #{}}.
 filter_system_properties(Key, Map) ->
   try
@@ -486,6 +498,7 @@ filter_system_properties(Key, Map) ->
     error:_ -> {[], Map}
   end.
 
+%% Filter #time
 -spec filter_time(#{}) -> {erlang:timestamp(), #{}}.
 filter_time(Map) ->
   try
@@ -498,7 +511,7 @@ filter_time(Map) ->
 
 -spec generate_uuid() -> string().
 generate_uuid() ->
-  ta_uuid:v4_string().
+  td_uuid:v4_string().
 
 -spec format2string(string()|binary()) -> string().
 format2string(Value) ->

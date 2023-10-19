@@ -1,16 +1,16 @@
 %%%-------------------------------------------------------------------
-%%% @author ios_m
+%%% @author ThinkingData
 %%% @copyright (C) 2023, <COMPANY>
 %%% @doc
-%%%
+%%% Example
 %%% @end
 %%% Created : 22. 3月 2023 21:21
 %%%-------------------------------------------------------------------
 %%%
 %%% need import {cowboy, {git, "https://github.com/ninenines/cowboy.git", {tag, "2.9.0"}}}
 
--module(te_start_cowboy).
--author("ios_m").
+-module(example_start_cowboy).
+-author("ThinkingData").
 
 %% API
 -export([start/0]).

@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 13. 7Month 2022 12:05
 %%%-------------------------------------------------------------------
--module(ta_utils).
+-module(td_utils).
 -author("ThinkingData").
 
 %% API

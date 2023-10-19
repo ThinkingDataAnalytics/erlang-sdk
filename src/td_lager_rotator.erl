@@ -2,12 +2,12 @@
 %%% @author yxiong
 %%% @copyright (C) 2022, <COMPANY>
 %%% @doc
-%%%
+%%% TE SDK log rotation rules. For lager
 %%% @end
 %%% Created : 16. 10M 2022 14:37
 %%%-------------------------------------------------------------------
--module(ta_lager_rotator).
--author("yxiong").
+-module(td_lager_rotator).
+-author("ThinkingData").
 
 -include_lib("kernel/include/file.hrl").
 
